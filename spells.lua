@@ -1,4 +1,4 @@
-return {
+local spells = {
     ['Bard'] = {
         [71] = {
             'Ancient: Draconic Might|Chieftan Relae Aderi NPC',
@@ -854,3 +854,4 @@ return {
         },
     },
 }
+return spells

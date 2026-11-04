@@ -1,3 +1,16 @@
+1.0 (Primal's release, inspired by TurboGear by Drel)
+- Tiered raid lists: Anguish (Tier 1), DSK (Tier 2), Dragons of Norrath (Tier 3); higher-tier items complete lower-tier rows
+- Upgrade chains: later epics complete earlier epic rows; DoN Icons and DSK Codexes complete FUKU and DSK clicky rows
+- Gear tab: drag column headers to reorder characters, columns fit the window, Item column pinned, dark theme
+- DoN list: Epic group (Scales and 2.75), Reward row for each class's legendary item, Avarice charms complete Duality of Desire
+- Fixed Head / Preserved Eye of the Putrid Drake IDs and several item names
+- Type 12 Foci tab: effect x character table (DoN / DSK / missing) and searchable Anguish source items
+- Spells tab: DoN spells and tomes, draggable character tiles
+- Lockouts tab rebuilt from TurboGear: live timers, custom lockouts, DoN missions and raids
+- Need announces: Type 12 foci, every class missing a focus, higher-tier and chain items count, each character named once
+- Background helper runs as lazbis/bg so the window can open on any character; works across computers; helpers stop 90s after the last window closes
+- Theme and data files merged into init.lua
+
 3.5.0
 - Add `group` startup argument which will limit all interactions to group keyed off the group leader so multiple groups can run BIS with separate drivers.
 - While running with `group` arg, changing selected characters will not result in switching broadcast modes.
