@@ -969,8 +969,8 @@ return {
 			['Waist'] = 'Windwatcher Sash/71621',
 			['Finger1'] = 'Dragon Nursery Ring/71592',
 			['Finger2'] = 'Eye of Tirranun/71652',
-			['Ranged'] = 'Crux of the First Brood/60535',
-			['RangedAug'] = 'Phial of the First Brood/71578',
+			['Ranged'] =  'Phial of the First Brood/71578',
+			['RangedAug'] = 'Crux of the First Brood/60535',
 			['Clicky1'] = 'Icon of Ancient Boon/56758',
 			['Clicky2'] = 'Icon of Scribe\'s Endurance/56756',
 			['Clicky3'] = 'Icon of the Ancient Scribe/57143',
@@ -4988,6 +4988,12 @@ return {
 			['Bifold'] = 'Bifold Focus of the Evil Eye',
 		},
 		['Template'] = {
+			['Winter\'s Embrace: Defender'] = 'Winter\'s Embrace: Defender/151094',
+			['Winter\'s Embrace: Healer'] = 'Winter\'s Embrace: Healer/151096',
+			['Winter\'s Embrace: Sorcerer'] = 'Winter\'s Embrace: Sorcerer/151097',
+			['Winter\'s Embrace: Slayer'] = 'Winter\'s Embrace: Slayer/151095',
+			['Spirit of the Season (Valor)'] = 'Spirit of the Season (Valor)/51935',
+			['Spirit of the Season (Wisdom)'] = 'Spirit of the Season (Wisdom)/51936',
 			['EnchantedJewel(Shielding)'] = 'Enchanted Jewel of Shielding',
 			['MysticalAegis(Spell Shield)'] = 'Planar Orb of Mystical Aegis',
 			['Prowess(Offense)'] = 'Planar Alloy of Prowess',
@@ -5013,6 +5019,7 @@ return {
 				{Name='Gold Coins', Slots={'DarkArachnids(Does not stack with other Dodge)','Dragorn(+ 10 to Wep Skills)','War Bear Saddle(Or any other AC Mount)','WarPirate(Does not stack with Brell)'}},
 				{Name='Celestial Crests', Slots={'Bifold','BloodDrinker','IdolScale','Lucky Copper/Silver','Lucky Grass','Lucky Horseshoe','Mount','Oculous','VenomVial'}},
 				{Name='Player Made', Slots={'BoarWhistle','SnakeFlute',}},
+				{Name='Christmas Stocking', Slots={'Winter\'s Embrace: Defender','Winter\'s Embrace: Healer','Winter\'s Embrace: Sorcerer','Winter\'s Embrace: Slayer','Spirit of the Season (Valor)','Spirit of the Season (Wisdom)',}},
 			}
 		}
 	},

@@ -1,3 +1,10 @@
+1.1
+- Type 12 Foci: Coalesced augs (Extension, Efficiency, Alacrity) added as a top tier above DoN and DSK; each one covers both the Beneficial and Detrimental row
+- Type 12 announces: linking a Coalesced aug names everyone without it, and a Coalesced aug covers the matching DoN and DSK foci
+- Vendor Items: new Christmas Stocking group with the four Winter's Embrace augs and both Spirit of the Season augs
+- Need announces now match item names containing brackets, such as Spirit of the Season (Valor)
+- DoN list: corrected Ranged and RangedAug items for Cleric, Druid, Shaman, Enchanter, Magician, Necromancer and Wizard; Ranger shoulder is now Brimstone Spaulders
+
 1.0 (Primal's release, inspired by TurboGear by Drel)
 - Tiered raid lists: Anguish (Tier 1), DSK (Tier 2), Dragons of Norrath (Tier 3); higher-tier items complete lower-tier rows
 - Upgrade chains: later epics complete earlier epic rows; DoN Icons and DSK Codexes complete FUKU and DSK clicky rows

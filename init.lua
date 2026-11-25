@@ -8,7 +8,7 @@ Inspired by TurboGear - Drel
 
 Tracker lua script for all the good stuff to have on Project Lazarus server.
 ]]
-local meta			= {version = '1.0', name = string.match(string.gsub(debug.getinfo(1, 'S').short_src, '\\init.lua', ''), "[^\\]+$")}
+local meta			= {version = '1.1', name = string.match(string.gsub(debug.getinfo(1, 'S').short_src, '\\init.lua', ''), "[^\\]+$")}
 local mq			= require('mq')
 local ImGui			= require('ImGui')
 -- Lazbis visual theme based on TurboGear v1.2.96 (drel-git/Turbo).
@@ -617,12 +617,12 @@ local type12Matrix = {
 	rows = {
 		{label = 'Increased Healing', source = 'Merciful Mending', color = 'healing'},
 		{label = 'Extended Reach', source = 'Expanded Reach', color = 'beneficial'},
-		{label = 'Beneficial Extension', source = 'Benevolent Extension', color = 'beneficial'},
-		{label = 'Beneficial Mana Reduction', source = 'Benevolent Efficiency', color = 'beneficial'},
-		{label = 'Beneficial Cast Time Reduction', source = 'Benevolent Alacrity', color = 'beneficial'},
-		{label = 'Detrimental Extension', source = 'Malevolent Extension', color = 'detrimental'},
-		{label = 'Detrimental Mana Reduction', source = 'Malevolent Efficiency', color = 'detrimental'},
-		{label = 'Detrimental Cast Time Reduction', source = 'Malevolent Alacrity', color = 'detrimental'},
+		{label = 'Beneficial Extension', source = 'Benevolent Extension', color = 'beneficial', coalesced = 'Extension'},
+		{label = 'Beneficial Mana Reduction', source = 'Benevolent Efficiency', color = 'beneficial', coalesced = 'Efficiency'},
+		{label = 'Beneficial Cast Time Reduction', source = 'Benevolent Alacrity', color = 'beneficial', coalesced = 'Alacrity'},
+		{label = 'Detrimental Extension', source = 'Malevolent Extension', color = 'detrimental', coalesced = 'Extension'},
+		{label = 'Detrimental Mana Reduction', source = 'Malevolent Efficiency', color = 'detrimental', coalesced = 'Efficiency'},
+		{label = 'Detrimental Cast Time Reduction', source = 'Malevolent Alacrity', color = 'detrimental', coalesced = 'Alacrity'},
 		{label = 'Magic Damage', source = 'Arcane Demise', color = 'magic'},
 		{label = 'Fire Damage', source = 'Fiery Demise', color = 'fire'},
 		{label = 'Ice Damage', source = 'Chilling Demise', color = 'ice'},
@@ -645,11 +645,19 @@ local type12Matrix = {
 		disease = {0.66, 0.66, 0.36, 1.00},
 		melee = {0.96, 0.66, 0.30, 1.00},
 		defense = {0.36, 0.60, 0.96, 1.00},
+		Coalesced = {0.96, 0.80, 0.35, 1.00},
 		DoN = {0.40, 0.86, 0.46, 1.00},
 		DSK = {0.62, 0.58, 0.92, 1.00},
 		['-'] = {0.50, 0.55, 0.62, 1.00},
 		['...'] = {0.38, 0.42, 0.48, 1.00},
 	},
+}
+
+-- Coalesced augs are the top tier: each one covers both the Beneficial and Detrimental row of its kind.
+type12Matrix.coalesced = {
+	Extension = {name = 'Cryptic Clutch of Coalesced Extension', id = 151113, notes = 'Coalesced Perpetuation: +40% beneficial and detrimental spell duration'},
+	Efficiency = {name = 'Cryptic Clutch of Coalesced Efficiency', id = 151111, notes = 'Coalesced Providence: beneficial and detrimental spell mana cost reduced by up to 33%'},
+	Alacrity = {name = 'Cryptic Clutch of Coalesced Alacrity', id = 151112, notes = 'Coalesced Precipitousness: -40% beneficial and detrimental spell cast time'},
 }
 
 local function donInventoryText(entry)
@@ -752,8 +760,7 @@ local raidTiers = {
 }
 local group				= {}
 local sortedGroup		= {}
--- Gear-tab toon column order state, kept in one table so functions that need it
--- (including the big bisGUI closure) only capture a single upvalue.
+-- Toon column order state, in one table to keep upvalue counts down.
 local gearOrder			= {
 	order = {},		-- user-defined, persisted display order of toon names
 	current = {},	-- current frame's toon order (built from .order), used by the Gear table
@@ -788,12 +795,8 @@ local server		= mq.TLO.EverQuest.Server()
 local dbfmt			= "INSERT INTO Inventory VALUES ('%s','%s','%s','%s','%s','%s',%d,%d,'%s');\n"
 local db
 local actor
--- Like TurboGear, lazbis uses a named mailbox with the mailbox in every address, so messages also
--- reach clients on other computers. Messages go straight to a character; a running character that
--- doesn't answer a request within 5 seconds is switched to a broadcast to the whole mailbox, with
--- the recipient's name inside.
--- A mailbox address without a script only reaches that mailbox in the sender's own script, so
--- every message is addressed to both the window (lazbis) and the background helper (lazbis/bg).
+-- Messages use a named mailbox (reaches other computers) and name both scripts, lazbis and lazbis/bg.
+-- A character that doesn't answer a direct request within 5s is switched to mailbox broadcasts.
 local mail = {box = 'lazbis_mail', named = false, bcast = {}, pending = {}, heard = {}}
 mail.scripts = {meta.name, meta.name .. '/bg'}
 mail.broadcast = function(content)
@@ -820,8 +823,7 @@ mail.send = function(name, content)
 	end
 	mail.direct(name, content)
 end
--- When the window closes, this character goes back to answering through its background helper.
--- /timed waits 2 seconds so the helper doesn't see the window still running and quit.
+-- On close, restart this character's helper; /timed lets the window exit first.
 mail.handOff = function()
 	if mail.handedOff then return end
 	mail.handedOff = true
@@ -989,9 +991,7 @@ local function splitToTable(str, char)
 	return t
 end
 
--- Stable numeric id derived from a string, used as ImGui table column user_id so that
--- Dear ImGui can identify a column (e.g. a specific toon) across frames/sessions
--- regardless of how many columns exist or what order they were declared in.
+-- Stable table column id for a name, so ImGui keeps a toon's column across reorders.
 gearOrder.stableId = function(str)
 	local hash = 5381
 	for i = 1, #str do
@@ -1000,8 +1000,7 @@ gearOrder.stableId = function(str)
 	return hash
 end
 
--- Extracts a width from either a plain number or an ImVec2-like {x=..,y=..} value,
--- since different ImGui size-returning calls may return either.
+-- Width from either a number or an ImVec2.
 gearOrder.vecWidth = function(v)
 	if type(v) == 'number' then return v end
 	if type(v) == 'table' or type(v) == 'userdata' then
@@ -1971,8 +1970,7 @@ local function type12ItemLocation(item, bank)
     return 'Inventory'
 end
 
--- Exact finished Cryptic Clutch names only: base foci and Vacant Vessels
--- do not satisfy the Type 12 ownership requirement.
+-- Finished augs only: base foci and Vacant Vessels don't count.
 local function searchType12Foci()
     local results = {}
     local wornAugs = wornAugmentNames()
@@ -2015,6 +2013,10 @@ local function searchType12Foci()
     results.don = {}
     for _, row in ipairs(type12Matrix.rows) do
         results.don[row.source] = locate('Cryptic Clutch of ' .. row.source)
+    end
+    results.coalesced = {}
+    for kind, aug in pairs(type12Matrix.coalesced) do
+        results.coalesced[kind] = locate(aug.name)
     end
     return results
 end
@@ -2587,9 +2589,7 @@ gearOrder.save = function()
 	simpleExec(("INSERT INTO Settings VALUES ('GearColumnOrder', '%s') ON CONFLICT(Key) DO UPDATE SET Value = '%s'"):format(nameList, nameList))
 end
 
--- Returns the toons currently in `group` arranged per the user's saved order.
--- Any toon not yet present in the saved order is appended (and the saved
--- order is updated/persisted) so newly-seen alts get a stable slot too.
+-- Toons in the saved order; new toons are appended and saved.
 gearOrder.get = function()
 	local ordered = {}
 	local seen = {}
@@ -2852,6 +2852,10 @@ type12Matrix.cell = function(char, row)
 		if hit.location then return string.format("Found '%s' in slot (%s)", name, hit.location) end
 		return string.format("Found '%s'", name)
 	end
+	local coalesced = row.coalesced and scan.coalesced and scan.coalesced[row.coalesced]
+	if coalesced and coalesced.status ~= 'missing' then
+		return {text = 'Coalesced', tip = found(type12Matrix.coalesced[row.coalesced].name, coalesced)}
+	end
 	local crypticName = 'Cryptic Clutch of ' .. row.source
 	local don = scan.don and scan.don[row.source]
 	if not scan.don then
@@ -2883,7 +2887,7 @@ type12Matrix.draw = function()
 		local cells, allDon = {}, true
 		for i, char in ipairs(chars) do
 			cells[i] = type12Matrix.cell(char, spec)
-			if cells[i].text ~= 'DoN' then allDon = false end
+			if cells[i].text ~= 'DoN' and cells[i].text ~= 'Coalesced' then allDon = false end
 		end
 		if not (settings.ShowMissingOnly and allDon) then rows[#rows + 1] = {spec = spec, cells = cells} end
 	end
@@ -2919,7 +2923,8 @@ type12Matrix.draw = function()
 			lockouts.text(colors[row.spec.color], row.spec.label)
 			if ImGui.IsItemHovered() then
 				local notes = crypticFocusNotes['Cryptic Clutch of ' .. row.spec.source]
-				ImGui.SetTooltip('%s', 'Cryptic Clutch of ' .. row.spec.source .. ' / Hideous Hex of ' .. row.spec.source .. (notes and ('\n' .. notes) or ''))
+				local aug = row.spec.coalesced and type12Matrix.coalesced[row.spec.coalesced]
+				ImGui.SetTooltip('%s', (aug and (aug.name .. ' (covers both)\n') or '') .. 'Cryptic Clutch of ' .. row.spec.source .. ' / Hideous Hex of ' .. row.spec.source .. (notes and ('\n' .. notes) or ''))
 			end
 			for i, cell in ipairs(row.cells) do
 				ImGui.TableSetColumnIndex(i)
@@ -3006,7 +3011,7 @@ local function drawType12Tab()
 	currentTab = 'Type 12 Foci'
 	if ImGui.Button('Refresh##type12') then selectionChanged = true end
 	ImGui.SameLine()
-	lockouts.text(type12Matrix.colors['-'], 'DoN = Cryptic Clutch owned.  DSK = Hideous Hex owned, DoN missing.  - = missing.')
+	lockouts.text(type12Matrix.colors['-'], 'Coalesced = covers both Beneficial and Detrimental.  DoN = Cryptic Clutch.  DSK = Hideous Hex.  - = missing.')
 	type12Matrix.draw()
 	ImGui.Spacing()
 	ImGui.Separator()
@@ -4232,15 +4237,22 @@ type12Announce.names = function()
 	end
 	for _, entry in ipairs(dskHexFocus.shared) do addHex(entry) end
 	for _, entry in pairs(dskHexFocus.byClass) do addHex(entry) end
+	for kind, aug in pairs(type12Matrix.coalesced) do
+		lookup[aug.name:lower()] = {name = aug.name, focus = 'Coalesced ' .. kind, coalesced = kind}
+	end
 	type12Announce.lookup = lookup
 	return lookup
 end
 
--- nil until the character is scanned. Owning either finished form (Cryptic Clutch or Hex) covers the focus.
--- The Type 12 tab's foci apply to every class; the class-gated Prowess augs keep the class lists.
+-- nil until scanned. Same rule as the Type 12 tab; the class-gated Prowess augs keep their class lists.
 type12Announce.needs = function(char, hit)
 	local scan = type12Gear[char.Name]
 	if not scan then return nil end
+	if hit.coalesced then
+		if not scan.coalesced then return nil end
+		local aug = scan.coalesced[hit.coalesced]
+		return not (aug and aug.status ~= 'missing')
+	end
 	local focus = hit.focus
 	for _, row in ipairs(type12Matrix.rows) do
 		if row.source == focus then
@@ -4355,7 +4367,8 @@ local function sayCallback(line)
 						-- A class's own row replaces the template row for the same slot.
 						if item and not (itembucket == templateItems and classItems and classItems[slot]) then
 							for itemName in split(item, '/') do
-								if string.find(line, itemName:gsub('-','%%-')) then
+								-- Plain match: item names can contain pattern characters such as brackets.
+								if string.find(line, itemName, 1, true) then
 									local hasItem = gear[char.Name][slot] ~= nil and (gear[char.Name][slot].count > 0 or (gear[char.Name][slot].componentcount or 0) > 0)
 									if not hasItem and list.id ~= selectedItemList.id then
 										loadSingleRow(list.id, char.Name, itemName)
